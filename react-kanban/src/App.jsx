@@ -1,8 +1,22 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Paperclip, MessageCircle, Plus, MoreVertical } from "lucide-react";
 import "./App.css";
 
+const CardMenu = ({ onDelete, onDuplicate }) => {
+  return (
+    <div className="card-menu">
+      <button className="menu-item" onClick={onDuplicate}>
+        Duplicate
+      </button>
+      <button className="menu-item delete" onClick={onDelete}>
+        Delete
+      </button>
+    </div>
+  );
+};
+
 const Card = ({
+  id,
   category,
   title,
   attachments,
@@ -10,15 +24,61 @@ const Card = ({
   avatars,
   categoryColor,
   image,
-  onMenuClick,
+  onDragStart,
+  onDelete,
+  onDuplicate,
+  onClick,
 }) => {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef(null);
+  const dotsRef = useRef(null);
+
+  const handleMenuClick = (e) => {
+    e.stopPropagation();
+    setShowMenu(!showMenu);
+  };
+
+  const handleClickOutside = (event) => {
+    if (menuRef.current && !menuRef.current.contains(event.target)) {
+      if (dotsRef.current && !dotsRef.current.contains(event.target)) {
+        setShowMenu(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleDuplicate = (e) => {
+    e.stopPropagation();
+    onDuplicate();
+    setShowMenu(false);
+  };
+
+  const handleDelete = (e) => {
+    e.stopPropagation();
+    onDelete();
+    setShowMenu(false);
+  };
+
   return (
-    <div className="card">
+    <div className="card" draggable onDragStart={onDragStart}>
       <div className="card-header">
         <span className={`category-tag ${categoryColor}`}>{category}</span>
-        <button className="menu-dots" onClick={onMenuClick}>
-          <MoreVertical size={14} />
-        </button>
+        <div className="menu-container">
+          <button className="menu-dots" onClick={handleMenuClick} ref={dotsRef}>
+            <MoreVertical size={14} />
+          </button>
+          {showMenu && (
+            <div ref={menuRef}>
+              <CardMenu onDuplicate={handleDuplicate} onDelete={handleDelete} />
+            </div>
+          )}
+        </div>
       </div>
       <div className="card-content">
         <h3 className="card-title">{title}</h3>
@@ -59,27 +119,27 @@ const Card = ({
   );
 };
 
-const KanbanColumn = ({ title, cards, onAddCard }) => {
+const KanbanColumn = ({
+  title,
+  cards,
+  onAddCard,
+  columnId,
+  onDragOver,
+  onDrop,
+  children,
+}) => {
   return (
-    <div className="kanban-column">
+    <div
+      className="kanban-column"
+      onDragOver={onDragOver}
+      onDrop={(e) => onDrop(e, columnId)}
+    >
       <div className="column-header">
         <h3 className="column-title">{title}</h3>
         <span className="card-count">{cards.length}</span>
       </div>
       <div className="column-content">
-        {cards.map((card, index) => (
-          <Card
-            key={index}
-            category={card.category}
-            title={card.title}
-            attachments={card.attachments}
-            comments={card.comments}
-            avatars={card.avatars}
-            categoryColor={card.categoryColor}
-            image={card.image}
-            onMenuClick={() => console.log(`Menu clicked for: ${card.title}`)}
-          />
-        ))}
+        {children}
         <button className="add-card-btn" onClick={onAddCard}>
           <Plus size={16} />
           Add New Item
@@ -93,6 +153,7 @@ const App = () => {
   const [columns, setColumns] = useState({
     inProgress: [
       {
+        id: 1,
         category: "UX",
         title: "Research FAQ page UX",
         attachments: 4,
@@ -105,6 +166,7 @@ const App = () => {
         categoryColor: "ux",
       },
       {
+        id: 2,
         category: "App",
         title: "Find new images for pages",
         attachments: 10,
@@ -119,6 +181,7 @@ const App = () => {
           "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=200&fit=crop",
       },
       {
+        id: 3,
         category: "App",
         title: "Forms & Tables section",
         attachments: 1,
@@ -129,6 +192,7 @@ const App = () => {
     ],
     inReview: [
       {
+        id: 4,
         category: "Code Review",
         title: "Review Javascript code",
         attachments: 2,
@@ -140,6 +204,7 @@ const App = () => {
         categoryColor: "code-review",
       },
       {
+        id: 5,
         category: "iOS App",
         title: "Food delivery ios app",
         attachments: 2,
@@ -154,6 +219,7 @@ const App = () => {
     ],
     done: [
       {
+        id: 6,
         category: "Info",
         title: "Review completed Apps",
         attachments: 8,
@@ -165,6 +231,7 @@ const App = () => {
         categoryColor: "info",
       },
       {
+        id: 7,
         category: "Design",
         title: "Design new landing page",
         attachments: 3,
@@ -176,10 +243,108 @@ const App = () => {
         categoryColor: "design",
       },
     ],
+    testing: [
+      {
+        id: 8,
+        category: "App",
+        title: "Test new features",
+        attachments: 5,
+        comments: 10,
+        avatars: [
+          "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=40&h=40&fit=crop&crop=face&facepad=2",
+          "https://images.unsplash.com/photo-1521791136064-7b8c1f6e9a0f?w=40&h=40&fit=crop&crop=face&facepad=2",
+        ],
+        categoryColor: "app",
+      },
+    ],
+    live: [
+      {
+        id: 9,
+        category: "design",
+        title: "Deploy to production",
+        attachments: 1,
+        comments: 2,
+        avatars: [
+          "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=40&h=40&fit=crop&crop=face&facepad=2",
+          "https://images.unsplash.com/photo-1521791136064-7b8c1f6e9a0f?w=40&h=40&fit=crop&crop=face&facepad=2",
+        ],
+        categoryColor: "design",
+      },
+    ],
   });
+
+  const [draggedCard, setDraggedCard] = useState(null);
+
+  const handleDragStart = (e, card, columnId) => {
+    setDraggedCard({ ...card, sourceColumn: columnId });
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (e, targetColumnId) => {
+    e.preventDefault();
+    if (!draggedCard || draggedCard.sourceColumn === targetColumnId) return;
+
+    setColumns((prevColumns) => {
+      const sourceColumn = [...prevColumns[draggedCard.sourceColumn]];
+      const cardIndex = sourceColumn.findIndex(
+        (card) => card.id === draggedCard.id
+      );
+      if (cardIndex === -1) return prevColumns;
+
+      const [movedCard] = sourceColumn.splice(cardIndex, 1);
+      const targetColumn = [...prevColumns[targetColumnId]];
+      targetColumn.push(movedCard);
+
+      return {
+        ...prevColumns,
+        [draggedCard.sourceColumn]: sourceColumn,
+        [targetColumnId]: targetColumn,
+      };
+    });
+
+    setDraggedCard(null);
+  };
+
+  const handleDeleteCard = (cardId, columnId) => {
+    setColumns((prevColumns) => ({
+      ...prevColumns,
+      [columnId]: prevColumns[columnId].filter((card) => card.id !== cardId),
+    }));
+  };
+
+  const handleDuplicateCard = (cardId, columnId) => {
+    setColumns((prevColumns) => {
+      const columnCards = [...prevColumns[columnId]];
+      const cardToDuplicate = columnCards.find((card) => card.id === cardId);
+
+      if (!cardToDuplicate) return prevColumns;
+
+      const newCard = {
+        ...cardToDuplicate,
+        id: Date.now(),
+        title: `${cardToDuplicate.title} (Copy)`,
+      };
+
+      return {
+        ...prevColumns,
+        [columnId]: [...columnCards, newCard],
+      };
+    });
+  };
 
   const handleAddCard = (columnKey) => {
     console.log(`Add card to ${columnKey}`);
+  };
+
+  const formatColumnTitle = (key) => {
+    return key
+      .replace(/([A-Z])/g, " $1")
+      .replace(/^./, (str) => str.toUpperCase());
   };
 
   return (
@@ -190,21 +355,34 @@ const App = () => {
       </div>
 
       <div className="kanban-board">
-        <KanbanColumn
-          title="In Progress"
-          cards={columns.inProgress}
-          onAddCard={() => handleAddCard("inProgress")}
-        />
-        <KanbanColumn
-          title="In Review"
-          cards={columns.inReview}
-          onAddCard={() => handleAddCard("inReview")}
-        />
-        <KanbanColumn
-          title="Done"
-          cards={columns.done}
-          onAddCard={() => handleAddCard("done")}
-        />
+        {Object.entries(columns).map(([columnId, cards]) => (
+          <KanbanColumn
+            key={columnId}
+            title={formatColumnTitle(columnId)}
+            cards={cards}
+            columnId={columnId}
+            onAddCard={() => handleAddCard(columnId)}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+          >
+            {cards.map((card) => (
+              <Card
+                key={card.id}
+                id={card.id}
+                category={card.category}
+                title={card.title}
+                attachments={card.attachments}
+                comments={card.comments}
+                avatars={card.avatars}
+                categoryColor={card.categoryColor}
+                image={card.image}
+                onDragStart={(e) => handleDragStart(e, card, columnId)}
+                onDelete={() => handleDeleteCard(card.id, columnId)}
+                onDuplicate={() => handleDuplicateCard(card.id, columnId)}
+              />
+            ))}
+          </KanbanColumn>
+        ))}
       </div>
     </div>
   );
